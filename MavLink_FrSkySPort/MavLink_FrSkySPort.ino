@@ -48,6 +48,11 @@ AccX            ( X Axis average vibration m/s?)
 AccY            ( Y Axis average vibration m/s?)
 AccZ            ( Z Axis average vibration m/s?)
 
+curr            ( Current in A) GMM
+cell --> non è la singola cella più bassa ma la media (cells/cel_n)
+Vfas = Cells
+
+
 ******************************************************
 
  */

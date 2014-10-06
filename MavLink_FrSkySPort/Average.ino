@@ -354,6 +354,8 @@ void parseStatusText(int32_t severity, String text)
   else if(text.startsWith("ArduCopter V"))                                 textId = 0;
   else if(text.startsWith("ArduPlane V"))                                  textId = 0;
   else if(text.startsWith("PX4: "))                                        textId = 0;
+  
+  else if(text.startsWith("Reached Command"))                              textId = 99;  
 
   // Unknown text (textId = 1023)
   else                                                                     textId = 1023;

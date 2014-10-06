@@ -1,10 +1,44 @@
+-- ******************************************************
+-- Data transmitted to FrSky Taranis:
+
+-- Cell            ( Voltage of Cell=Cells/(Number of cells). [V]) 
+-- Cells           ( Voltage from LiPo [V] )
+-- A2              ( HDOP value * 25 - 8 bit resolution)
+-- A3              ( Roll angle from -Pi to +Pi radians, converted to a value between 0 and 1024)
+-- A4              ( Pitch angle from -Pi/2 to +Pi/2 radians, converted to a value between 0 and 1024)
+-- Alt             ( Altitude from baro.  [m] )
+-- GAlt            ( Altitude from GPS   [m])
+-- HDG             ( Compass heading  [deg]) v
+-- Rpm             ( Throttle when ARMED [%] *100 + % battery remaining as reported by Mavlink)
+-- VSpd            ( Vertical speed [m/s] )
+-- Speed           ( Ground speed from GPS,  [km/h] )
+-- T1              ( GPS status = ap_sat_visible*10) + ap_fixtype )
+-- T2              ( Armed Status and Mavlink Messages :- 16 bit value: bit 1: armed - bit 2-5: severity +1 (0 means no message - bit 6-15: number representing a specific text)
+-- Vfas            ( same as Cells )
+-- Longitud        ( Longitud )
+-- Latitud         ( Latitud )
+-- Dist            ( Will be calculated by FrSky Taranis as the distance from first received lat/long = Home Position )
+-- Fuel            ( Current Flight Mode reported by Mavlink )
+
+-- AccX            ( X Axis average vibration m/s?)
+-- AccY            ( Y Axis average vibration m/s?)
+-- AccZ            ( Z Axis average vibration m/s?)
+
+-- curr            ( Current in A) GMM
+-- ******************************************************
+
 ApmTelem_API_VER = 2
 
-local soundfile_base = "/SOUNDS/en/fm_"
+local general_soundfile_base = "/SOUNDS/en/"
+local fm_soundfile_base = "/SOUNDS/en/fm_"
+local err_soundfile_base = "/SOUNDS/en/ER"
 
 local apm_status_message = {severity = 0, textnr = 0, timestamp=0}
 
 local outputs = {"armd"}
+
+--GMM aggiunto parametro di input
+local inputs = {{"Play", VALUE, 0, 1, 1} }
 
 local function init()
 	ApmTelem_ACTIVE = true
@@ -160,6 +194,9 @@ local function decodeApmStatusText(textnr)
   
 	elseif textnr ==  86 then return "flight plan update rejected"
 	elseif textnr ==  87 then return "flight plan received"
+
+	elseif textnr ==  99 then return "Reached Command xx" -- gmm
+	
 	end
 	return ""
 end
@@ -286,7 +323,7 @@ local function getWarningTimeout()
 	return getTime() + 100*2
 end
 
-local function run_func()
+local function run_func(voice)
 	-- Handle warning messages from mavlink
 	local t2 = getValue(210) -- Temp2
 	local armed = t2%0x02;
@@ -294,15 +331,25 @@ local function run_func()
 	local status_severity = t2%0x10;
 	t2 = (t2-status_severity)/0x10;
 	local status_textnr = t2%0x400;
-	if(status_severity > 0)
+	if(status_severity > 0) then
 	then
-		if status_severity ~= apm_status_message.severity or status_textnr ~= apm_status_message.textnr
+		if status_severity ~= apm_status_message.severity or status_textnr ~= apm_status_message.textnr then
 		then
 			apm_status_message.severity = status_severity
 			apm_status_message.textnr = status_textnr
 			apm_status_message.timestamp = getTime()
+		-- gmm --> notifica sonora per un nuovo messaggio
+			if voice == 1 then
+				if status_textnr == 99 then playFile(general_soundfile_base  .. "GMM_HOMER_thats_good.wav")
+			    	else playFile(err_soundfile_base  .. status_severity .. ".wav") -- GMM_HOMER_thats_bad.wav GMM_HAL_mesage4u.wav .. GMM_HAL_fault.wav			
+					end
+			end
+		-- gmm fine
 		end
 	end
+	
+	
+	
 	if apm_status_message.timestamp > 0 and (apm_status_message.timestamp + 2*100) < getTime()
 	then
 		apm_status_message.severity = 0
@@ -321,4 +368,5 @@ local function run_func()
 	return armd
 end  
 
-return {init=init, run=run_func, output=outputs}
+-- Return statement
+return { run=run_func, output=outputs, init=init, input=inputs}
